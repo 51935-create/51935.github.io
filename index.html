@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Kanban Board (Final Corrected Version)</title>
+    <title>Ultimate Kanban Board (Final Stable Version)</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -50,6 +50,7 @@
         .modal-hidden { display: none; }
         .modal-content { background-color: #f4f7f9; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; display: flex; flex-direction: column; max-height: 80vh;}
         .modal-header { display: flex; justify-content: space-between; align-items: center; }
+        #modal-title-display { flex-grow: 1; }
         .modal-header input[type="text"] { flex-grow: 1; font-size: 1.5em; font-weight: bold; border: 1px solid #ccc; border-radius: 5px; padding: 5px 10px; margin-right: 15px; }
         .modal-header-controls button { margin-left: 10px; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background-color 0.3s ease;}
         #modal-edit-btn { background-color: var(--edit-color); color: white; }
@@ -129,8 +130,52 @@
         <div class="kanban-column" id="completed-col"><h2>สำเร็จแล้ว</h2><div class="cards-container"></div></div>
     </main>
 
-    <div id="task-modal" class="modal-backdrop modal-hidden"></div>
-    <div id="custom-dialog" class="modal-backdrop modal-hidden"></div>
+    <div id="task-modal" class="modal-backdrop modal-hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div id="modal-title-display">
+                    <h2 id="modal-task-title"></h2>
+                    <input type="text" id="modal-task-title-input" class="task-input" style="display: none;">
+                </div>
+                <div class="modal-header-controls">
+                    <button id="modal-edit-btn">Edit</button>
+                    <button id="modal-delete-btn">Delete Task</button>
+                    <button id="modal-close-btn">&times;</button>
+                </div>
+            </div>
+            <div id="modal-subtasks-container">
+                <div class="description-container">
+                    <p>คำอธิบาย</p>
+                    <textarea id="task-description" rows="4" placeholder="เพิ่มคำอธิบายรายละเอียด..."></textarea>
+                </div>
+                <ul class="subtask-list"></ul>
+                <form class="add-subtask-form">
+                    <input type="text" class="task-input" placeholder="เพิ่มขั้นตอนย่อย..." required>
+                    <button type="submit" class="add-button">เพิ่ม</button>
+                </form>
+                <div class="priority-controls">
+                    <p>ระดับความสำคัญ</p>
+                    <div class="priority-buttons">
+                        <button class="priority-btn" id="priority-btn-0" data-priority="0">ปกติ</button>
+                        <button class="priority-btn" id="priority-btn-1" data-priority="1">สำคัญ</button>
+                        <button class="priority-btn" id="priority-btn-2" data-priority="2">สำคัญมาก</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-dialog" class="modal-backdrop modal-hidden">
+        <div class="dialog-content">
+            <h3 id="dialog-title"></h3>
+            <p id="dialog-message"></p>
+            <input type="text" id="dialog-input" class="dialog-input" style="display: none;">
+            <div class="dialog-buttons">
+                <button id="dialog-cancel-btn">ยกเลิก</button>
+                <button id="dialog-confirm-btn">ตกลง</button>
+            </div>
+        </div>
+    </div>
     
     <div id="easter-egg-modal" class="modal-backdrop modal-hidden">
         <div class="easter-egg-content">
@@ -157,13 +202,12 @@
     </div>
 
     <script>
-    // --- WRAP ALL CODE IN DOMContentLoaded TO ENSURE THE DOM IS READY ---
     document.addEventListener('DOMContentLoaded', () => {
 
-        // --- STATE & ELEMENT SELECTIONS ---
         let tasks = [];
         let currentlyOpenTaskId = null;
 
+        // Static element selections
         const body = document.body;
         const createTaskBtn = document.getElementById('create-task-btn');
         const resetDataBtn = document.getElementById('reset-data-btn');
@@ -174,14 +218,13 @@
         const themeBtn = document.getElementById('theme-btn');
         const themePanel = document.querySelector('.theme-panel');
         const easterEggModal = document.getElementById('easter-egg-modal');
-        
+        const easterEggCloseBtn = document.getElementById('easter-egg-close-btn');
+
         const quiz = {
             question: "วัตถุ A ผลักวัตถุ B ด้วยแรง 10 นิวตัน วัตถุ B จะผลักวัตถุ A กลับด้วยแรงเท่าใดและในทิศทางใด?",
             options: [ "10 นิวตัน, ทิศทางเดียวกัน", "10 นิวตัน, ทิศทางตรงกันข้าม", "น้อยกว่า 10 นิวตัน", "ขึ้นอยู่กับมวลของวัตถุ A และ B" ],
             correctAnswerIndex: 1
         };
-
-        // --- FUNCTIONS (ALL FUNCTIONS ARE DEFINED HERE) ---
 
         function applyTheme(themeName) { body.className = ''; body.classList.add(themeName); }
         function saveTheme(themeName) { localStorage.setItem('kanbanTheme', themeName); }
@@ -192,14 +235,27 @@
 
         function showDialog({ title, message, showInput = false, confirmText = 'ตกลง', cancelText = 'ยกเลิก' }) {
             return new Promise(resolve => {
-                dialog.innerHTML = `<div class="dialog-content"><h3>${title}</h3><p>${message}</p><input type="text" class="dialog-input" style="display: ${showInput ? 'block' : 'none'};"><div class="dialog-buttons"><button class="dialog-cancel-btn">${cancelText}</button><button class="dialog-confirm-btn">${confirmText}</button></div></div>`;
-                const input = dialog.querySelector('.dialog-input');
-                const confirmBtn = dialog.querySelector('.dialog-confirm-btn');
-                const cancelBtn = dialog.querySelector('.dialog-cancel-btn');
+                const dialogTitle = dialog.querySelector('#dialog-title');
+                const dialogMessage = dialog.querySelector('#dialog-message');
+                const dialogInput = dialog.querySelector('#dialog-input');
+                const confirmBtn = dialog.querySelector('#dialog-confirm-btn');
+                const cancelBtn = dialog.querySelector('#dialog-cancel-btn');
+                
+                dialogTitle.textContent = title;
+                dialogMessage.textContent = message;
+                confirmBtn.textContent = confirmText;
+                cancelBtn.textContent = cancelText;
+                dialogInput.style.display = showInput ? 'block' : 'none';
+                dialogInput.value = '';
                 dialog.classList.remove('modal-hidden');
-                const onConfirm = () => { cleanup(); resolve(showInput ? input.value : true); };
+
+                const onConfirm = () => { cleanup(); resolve(showInput ? dialogInput.value : true); };
                 const onCancel = () => { cleanup(); resolve(showInput ? null : false); };
-                const cleanup = () => { dialog.classList.add('modal-hidden'); confirmBtn.removeEventListener('click', onConfirm); cancelBtn.removeEventListener('click', onCancel); };
+                const cleanup = () => {
+                    dialog.classList.add('modal-hidden');
+                    confirmBtn.removeEventListener('click', onConfirm);
+                    cancelBtn.removeEventListener('click', onCancel);
+                };
                 confirmBtn.addEventListener('click', onConfirm);
                 cancelBtn.addEventListener('click', onCancel);
             });
@@ -259,20 +315,39 @@
             });
         }
 
-        function openModal(taskId, initialEditMode = false) {
+        function openModal(taskId, isEditing = false) {
             currentlyOpenTaskId = taskId;
             const task = tasks.find(t => t.id === taskId);
             if (!task) return;
-            const isEditing = initialEditMode;
-            const titleElement = isEditing 
-                ? `<input type="text" id="modal-task-title-input" class="task-input" value="${task.title}">`
-                : `<h2 id="modal-task-title">${task.title}</h2>`;
-            modal.innerHTML = `<div class="modal-content"><div class="modal-header">${titleElement}<div class="modal-header-controls"><button id="modal-edit-btn">${isEditing ? 'Done' : 'Edit'}</button><button id="modal-delete-btn">Delete Task</button><button id="modal-close-btn">&times;</button></div></div><div id="modal-subtasks-container"><div class="description-container"><p>คำอธิบาย</p><textarea id="task-description" rows="4" placeholder="เพิ่มคำอธิบายรายละเอียด..." ${isEditing ? '' : 'readonly'}>${task.description || ''}</textarea></div><ul class="subtask-list"></ul><form class="add-subtask-form"><input type="text" class="task-input" placeholder="เพิ่มขั้นตอนย่อย..." required><button type="submit" class="add-button">เพิ่ม</button></form><div class="priority-controls"><p>ระดับความสำคัญ</p><div class="priority-buttons"><button class="priority-btn" id="priority-btn-0" data-priority="0">ปกติ</button><button class="priority-btn" id="priority-btn-1" data-priority="1">สำคัญ</button><button class="priority-btn" id="priority-btn-2" data-priority="2">สำคัญมาก</button></div></div></div></div>`;
+
             const modalContent = modal.querySelector('.modal-content');
+            const titleDisplay = modal.querySelector('#modal-title-display');
+            const titleH2 = modal.querySelector('#modal-task-title');
+            const titleInput = modal.querySelector('#modal-task-title-input');
+            const descriptionTextarea = modal.querySelector('#task-description');
+            const subtaskListUL = modal.querySelector('.subtask-list');
+            const editBtn = modal.querySelector('#modal-edit-btn');
+
+            modalContent.className = 'modal-content'; // Reset
             if (task.status === 'completed') { modalContent.classList.add('is-completed'); } 
             else if (isEditing) { modalContent.classList.add('is-editing'); }
             else { modalContent.classList.add('is-readonly'); }
-            const subtaskListUL = modal.querySelector('.subtask-list');
+            
+            if (isEditing) {
+                titleH2.style.display = 'none';
+                titleInput.style.display = 'block';
+                titleInput.value = task.title;
+                editBtn.textContent = 'Done';
+            } else {
+                titleH2.style.display = 'block';
+                titleInput.style.display = 'none';
+                titleH2.textContent = task.title;
+                editBtn.textContent = 'Edit';
+            }
+            
+            descriptionTextarea.value = task.description || '';
+            descriptionTextarea.readOnly = !isEditing;
+
             subtaskListUL.innerHTML = '';
             task.subtasks.forEach((subtask, index) => {
                 const item = document.createElement('li');
@@ -281,21 +356,9 @@
                 item.querySelector('input').addEventListener('change', e => updateProgress(taskId, e.target));
                 subtaskListUL.appendChild(item);
             });
+            modal.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected'));
             modal.querySelector(`#priority-btn-${task.priority}`).classList.add('selected');
-            modal.querySelectorAll('.priority-btn').forEach(btn => {
-                btn.addEventListener('click', () => { if (modalContent.classList.contains('is-editing')) { const newPriority = parseInt(btn.dataset.priority); task.priority = newPriority; modal.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); saveTasks(); renderBoard(); }});
-            });
-            modal.querySelector('#modal-close-btn').addEventListener('click', closeModal);
-            modal.querySelector('#modal-edit-btn').addEventListener('click', handleEditClick);
-            modal.querySelector('#modal-delete-btn').addEventListener('click', handleDeleteClick);
-            modal.querySelector('.add-subtask-form').addEventListener('submit', handleAddSubtask);
-            const titleInput = modal.querySelector('#modal-task-title-input');
-            if (titleInput) {
-                titleInput.addEventListener('blur', saveChanges);
-                titleInput.addEventListener('keypress', e => { if (e.key === 'Enter') { saveChanges(); titleInput.blur(); }});
-                titleInput.focus();
-            }
-            modal.querySelector('#task-description').addEventListener('blur', saveChanges);
+            
             modal.classList.remove('modal-hidden');
         }
 
@@ -305,15 +368,21 @@
             if (!task) return;
             const titleInput = modal.querySelector('#modal-task-title-input');
             const descriptionTextarea = modal.querySelector('#task-description');
-            if (titleInput) { const newTitle = titleInput.value.trim(); if (newTitle) { task.title = newTitle; } else { titleInput.value = task.title; } }
-            if (descriptionTextarea) { task.description = descriptionTextarea.value.trim(); }
+            
+            const newTitle = titleInput.value.trim();
+            if (newTitle) { task.title = newTitle; }
+            task.description = descriptionTextarea.value.trim();
             renderBoard();
         }
 
         function handleEditClick() {
-            saveChanges();
             const isCurrentlyEditing = modal.querySelector('.modal-content.is-editing');
-            openModal(currentlyOpenTaskId, !isCurrentlyEditing);
+            if (!isCurrentlyEditing) {
+                openModal(currentlyOpenTaskId, true); // Switch to editing mode
+            } else {
+                saveChanges();
+                openModal(currentlyOpenTaskId, false); // Switch to read-only mode
+            }
         }
         
         async function handleDeleteClick() {
@@ -325,18 +394,22 @@
 
         function handleAddSubtask(e) {
             e.preventDefault();
-            const input = e.target.querySelector('.task-input');
+            const input = e.target.querySelector('.add-subtask-form .task-input');
             const text = input.value.trim();
             if (text && currentlyOpenTaskId) {
                 const task = tasks.find(t => t.id === currentlyOpenTaskId);
                 task.subtasks.push({ text: text, done: false });
                 input.value = '';
                 openModal(currentlyOpenTaskId, true); 
-                updateProgress(taskId, null); 
+                updateProgress(currentlyOpenTaskId, null); 
             }
         }
         
-        function closeModal() { if (modal.querySelector('.modal-content.is-editing')) { saveChanges(); } modal.classList.add('modal-hidden'); currentlyOpenTaskId = null; }
+        function closeModal() {
+            if (modal.querySelector('.modal-content.is-editing')) { saveChanges(); }
+            modal.classList.add('modal-hidden'); 
+            currentlyOpenTaskId = null; 
+        }
 
         function detectAndShowDeviceType() {
             const userAgent = navigator.userAgent;
@@ -393,7 +466,7 @@
                 showEasterEggModal(); 
             }
         }
-
+        
         // --- GLOBAL EVENT LISTENERS ---
         createTaskBtn.addEventListener('click', async () => {
             const title = await showDialog({ title: 'สร้างบล็อกใหม่', message: 'กรุณาใส่ชื่อหัวข้อของงาน:', showInput: true, confirmText: 'สร้าง' });
@@ -403,12 +476,10 @@
                 renderBoard();
             }
         });
-
         resetDataBtn.addEventListener('click', async () => {
             const isConfirmed = await showDialog({ title: 'ยืนยันการรีเซ็ต', message: 'คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลงานทั้งหมด?', confirmText: 'ใช่, รีเซ็ตเลย', cancelText: 'ยกเลิก' });
             if (isConfirmed) { localStorage.removeItem('kanbanTasks'); localStorage.removeItem('kanbanTheme'); location.reload(); }
         });
-
         themeBtn.addEventListener('click', () => themePanel.classList.toggle('active'));
         themePanel.addEventListener('click', (e) => {
             if (e.target.classList.contains('theme-color')) {
@@ -417,7 +488,6 @@
                 themePanel.classList.remove('active');
             }
         });
-
         columns.forEach(column => {
             column.addEventListener('dragover', e => e.preventDefault());
             column.addEventListener('drop', e => {
@@ -428,8 +498,28 @@
                 if (task && task.status !== 'completed') { task.status = newStatus; renderBoard(); }
             });
         });
-
         easterEggCloseBtn.addEventListener('click', startQuiz);
+
+        // Add listeners for the static task modal elements
+        modal.querySelector('#modal-close-btn').addEventListener('click', closeModal);
+        modal.querySelector('#modal-edit-btn').addEventListener('click', handleEditClick);
+        modal.querySelector('#modal-delete-btn').addEventListener('click', handleDeleteClick);
+        modal.querySelector('.add-subtask-form').addEventListener('submit', handleAddSubtask);
+        modal.querySelectorAll('.priority-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (modal.querySelector('.modal-content.is-editing')) {
+                    const task = tasks.find(t => t.id === currentlyOpenTaskId);
+                    if (task) {
+                        const newPriority = parseInt(btn.dataset.priority);
+                        task.priority = newPriority;
+                        modal.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        saveTasks();
+                        renderBoard();
+                    }
+                }
+            });
+        });
         
         // --- INITIAL APP LOAD ---
         loadTasks();
