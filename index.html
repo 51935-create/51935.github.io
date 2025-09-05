@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Kanban Board (Final Corrected Version)</title>
+    <title>Ultimate Kanban Board (Final Stable Version)</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
             --primary-color: #0079bf; --success-color: #5aac44; --danger-color: #eb5a46;
             --edit-color: #ff9f1a; --progress-bar-fill: #76c7c0; --body-bg: var(--primary-color);
+            --priority-normal: #27ae60; --priority-important: #f39c12; --priority-very-important: #e74c3c;
         }
         body.theme-green { --primary-color: #27ae60; --success-color: #2ecc71; --progress-bar-fill: #68cca9; --body-bg: var(--primary-color); }
         body.theme-red { --primary-color: #c0392b; --success-color: #d35400; --progress-bar-fill: #e67e22; --danger-color: #e74c3c; --body-bg: var(--primary-color); }
         body.theme-pink { --primary-color: #8e44ad; --success-color: #9b59b6; --progress-bar-fill: #d7bde2; --danger-color: #c0392b; --body-bg: var(--primary-color); }
         
         body { font-family: 'Sarabun', sans-serif; background-color: var(--body-bg); overflow-x: auto; min-height: 100vh; margin: 0; transition: background-color 0.3s ease; }
-        .top-bar { padding: 15px 30px; background-color: rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; }
+        .top-bar { padding: 15px 30px; background-color: rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .top-bar > div { display: flex; align-items: center; gap: 10px; }
         #create-task-btn { background-color: var(--success-color); transition: background-color 0.3s ease; padding: 10px 20px; font-size: 1em; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #reset-data-btn { background-color: var(--danger-color); padding: 10px 15px; font-size: 0.9em; color: white; border: none; border-radius: 5px; cursor: pointer; }
         #device-info { color: white; font-size: 0.9em; background-color: rgba(255, 255, 255, 0.2); padding: 5px 10px; border-radius: 5px; }
         .header-controls { display: flex; align-items: center; gap: 15px; }
         #theme-switcher { position: relative; }
@@ -30,10 +33,14 @@
         .kanban-column { background-color: #ebecf0; border-radius: 8px; padding: 15px; width: 320px; flex-shrink: 0; }
         .kanban-column h2 { margin-top: 0; font-size: 1.2em; color: #172b4d;}
         .cards-container { min-height: 100px; display: flex; flex-direction: column; gap: 10px; }
-        .task-card { background-color: #ffffff; border-radius: 5px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: grab; }
+        .task-card { background-color: #ffffff; border-radius: 5px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: grab; position: relative; }
+        .priority-indicator { position: absolute; top: 8px; right: 8px; width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); }
+        .task-card.priority-0 .priority-indicator { background-color: var(--priority-normal); }
+        .task-card.priority-1 .priority-indicator { background-color: var(--priority-important); }
+        .task-card.priority-2 .priority-indicator { background-color: var(--priority-very-important); }
         .task-card[data-status="completed"] { cursor: not-allowed; }
         .task-card.dragging { opacity: 0.5; transform: rotate(3deg); }
-        .task-card h4 { margin: 0 0 10px 0; color: #172b4d; transition: color 0.3s, text-decoration 0.3s;}
+        .task-card h4 { margin: 0 15px 10px 0; color: #172b4d; transition: color 0.3s, text-decoration 0.3s;}
         .task-card[data-status="completed"] h4 { text-decoration: line-through; color: #6c757d; }
         .progress-container { display: flex; align-items: center; gap: 8px; }
         .progress-bar { flex-grow: 1; height: 12px; background-color: #e0e0e0; border-radius: 6px; overflow: hidden; }
@@ -56,13 +63,21 @@
         .add-subtask-form { display: flex; gap: 10px; margin-top: 10px; }
         .task-input { flex-grow: 1; padding: 10px; border: 1px solid #dfe7ef; border-radius: 5px; }
         .add-button, #dialog-confirm-btn { background-color: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }
-        .modal-content.is-readonly .add-subtask-form, .modal-content.is-readonly .subtask-item input[type="checkbox"] { display: none; }
+        .modal-content.is-readonly .add-subtask-form, .modal-content.is-readonly .subtask-item input[type="checkbox"], .modal-content.is-readonly .priority-controls { display: none; }
         .modal-content.is-readonly .subtask-item input[type="checkbox"] { pointer-events: none; }
         .modal-content.is-editing #modal-edit-btn { background-color: var(--success-color); }
-        .modal-content.is-completed #modal-edit-btn, .modal-content.is-completed .add-subtask-form { display: none; }
+        .modal-content.is-completed #modal-edit-btn, .modal-content.is-completed .add-subtask-form, .modal-content.is-completed .priority-controls { display: none; }
         .modal-content.is-completed .subtask-item input[type="checkbox"] { pointer-events: none; }
         .modal-content.is-completed #modal-delete-btn, .modal-content.is-editing #modal-delete-btn { display: inline-block; }
         .modal-content.is-readonly #modal-delete-btn { display: none; }
+        .priority-controls { margin-top: 20px; border-top: 1px solid #dfe7ef; padding-top: 15px; }
+        .priority-controls p { margin: 0 0 10px 0; font-weight: bold; }
+        .priority-buttons { display: flex; gap: 10px; }
+        .priority-btn { flex-grow: 1; padding: 8px; border: 2px solid transparent; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .priority-btn.selected { border-color: var(--primary-color); }
+        #priority-btn-0 { background-color: var(--priority-normal); color: white;}
+        #priority-btn-1 { background-color: var(--priority-important); color: white;}
+        #priority-btn-2 { background-color: var(--danger-color); color: white;}
         #custom-dialog { z-index: 2000; }
         .dialog-content { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 90%; max-width: 400px; text-align: center; }
         .dialog-content h3 { margin-top: 0; } .dialog-content p { margin-bottom: 20px; color: #555;}
@@ -85,7 +100,10 @@
 </head>
 <body class="theme-default">
     <header class="top-bar">
-        <button id="create-task-btn">สร้างบล็อกใหม่ (+)</button>
+        <div>
+            <button id="create-task-btn">สร้างบล็อกใหม่ (+)</button>
+            <button id="reset-data-btn">รีเซ็ตข้อมูลทั้งหมด</button>
+        </div>
         <div class="header-controls">
             <div id="device-info"></div>
             <div id="theme-switcher">
@@ -136,8 +154,10 @@
     <script>
     let tasks = [];
     let currentlyOpenTaskId = null;
+
     const body = document.body;
     const createTaskBtn = document.getElementById('create-task-btn');
+    const resetDataBtn = document.getElementById('reset-data-btn');
     const columns = document.querySelectorAll('.kanban-column');
     const modal = document.getElementById('task-modal');
     const dialog = document.getElementById('custom-dialog');
@@ -145,9 +165,9 @@
     const themeBtn = document.getElementById('theme-btn');
     const themePanel = document.querySelector('.theme-panel');
     const easterEggModal = document.getElementById('easter-egg-modal');
-    const formulaScreen = document.getElementById('formula-screen');
-    const quizScreen = document.getElementById('quiz-screen');
-    const easterEggCloseBtn = document.getElementById('easter-egg-close-btn');
+    const formulaScreen = easterEggModal.querySelector('#formula-screen');
+    const quizScreen = easterEggModal.querySelector('#quiz-screen');
+    const easterEggCloseBtn = easterEggModal.querySelector('#easter-egg-close-btn');
 
     const quiz = {
         question: "วัตถุ A ผลักวัตถุ B ด้วยแรง 10 นิวตัน วัตถุ B จะผลักวัตถุ A กลับด้วยแรงเท่าใดและในทิศทางใด?",
@@ -178,22 +198,42 @@
     }
 
     function saveTasks() { localStorage.setItem('kanbanTasks', JSON.stringify(tasks)); }
-    function loadTasks() { const savedTasks = localStorage.getItem('kanbanTasks'); if (savedTasks) tasks = JSON.parse(savedTasks); }
+    function loadTasks() {
+        const savedTasks = localStorage.getItem('kanbanTasks');
+        if (savedTasks) {
+            try {
+                tasks = JSON.parse(savedTasks);
+                tasks.forEach(task => {
+                    if (task.priority === undefined) { task.priority = 0; }
+                });
+            } catch (e) {
+                console.error("Error parsing tasks from localStorage", e);
+                tasks = [];
+            }
+        }
+    }
 
     function renderBoard() {
         document.querySelectorAll('.cards-container').forEach(c => c.innerHTML = '');
-        tasks.forEach(task => {
-            const card = document.createElement('div');
-            card.className = 'task-card';
-            card.draggable = task.status !== 'completed';
-            card.dataset.taskId = task.id;
-            card.dataset.status = task.status;
-            const total = task.subtasks.length;
-            const completed = task.subtasks.filter(st => st.done).length;
-            const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-            const startBtn = task.status === 'not-started' ? `<button class="start-btn">เริ่มทำงาน</button>` : '';
-            card.innerHTML = `<h4 class="task-title">${task.title}</h4><div class="progress-container"><div class="progress-bar"><div class="progress-bar-fill" style="width: ${progress}%;"></div></div><span class="progress-percentage">${progress}%</span></div>${startBtn}`;
-            document.querySelector(`#${task.status}-col .cards-container`).appendChild(card);
+        const statuses = ['not-started', 'in-progress', 'completed'];
+        statuses.forEach(status => {
+            const columnTasks = tasks.filter(task => task.status === status);
+            columnTasks.sort((a, b) => b.priority - a.priority);
+            const container = document.querySelector(`#${status}-col .cards-container`);
+            columnTasks.forEach(task => {
+                const card = document.createElement('div');
+                card.className = 'task-card';
+                card.classList.add(`priority-${task.priority}`);
+                card.draggable = task.status !== 'completed';
+                card.dataset.taskId = task.id;
+                card.dataset.status = task.status;
+                const total = task.subtasks.length;
+                const completed = task.subtasks.filter(st => st.done).length;
+                const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+                const startBtn = task.status === 'not-started' ? `<button class="start-btn">เริ่มทำงาน</button>` : '';
+                card.innerHTML = `<div class="priority-indicator"></div><h4 class="task-title">${task.title}</h4><div class="progress-container"><div class="progress-bar"><div class="progress-bar-fill" style="width: ${progress}%;"></div></div><span class="progress-percentage">${progress}%</span></div>${startBtn}`;
+                container.appendChild(card);
+            });
         });
         addCardEventListeners();
         saveTasks();
@@ -217,31 +257,11 @@
         currentlyOpenTaskId = taskId;
         const task = tasks.find(t => t.id === taskId);
         if (!task) return;
-
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="modal-task-title"></h2>
-                    <div class="modal-header-controls">
-                        <button id="modal-edit-btn">Edit</button>
-                        <button id="modal-delete-btn">Delete Task</button>
-                        <button id="modal-close-btn">&times;</button>
-                    </div>
-                </div>
-                <div id="modal-subtasks-container">
-                    <ul class="subtask-list"></ul>
-                    <form class="add-subtask-form">
-                        <input type="text" class="task-input" placeholder="เพิ่มขั้นตอนย่อย..." required>
-                        <button type="submit" class="add-button">เพิ่ม</button>
-                    </form>
-                </div>
-            </div>`;
-
+        modal.innerHTML = `<div class="modal-content"><div class="modal-header"><h2 id="modal-task-title"></h2><div class="modal-header-controls"><button id="modal-edit-btn">Edit</button><button id="modal-delete-btn">Delete Task</button><button id="modal-close-btn">&times;</button></div></div><div id="modal-subtasks-container"><ul class="subtask-list"></ul><form class="add-subtask-form"><input type="text" class="task-input" placeholder="เพิ่มขั้นตอนย่อย..." required><button type="submit" class="add-button">เพิ่ม</button></form><div class="priority-controls"><p>ระดับความสำคัญ</p><div class="priority-buttons"><button class="priority-btn" id="priority-btn-0" data-priority="0">ปกติ</button><button class="priority-btn" id="priority-btn-1" data-priority="1">สำคัญ</button><button class="priority-btn" id="priority-btn-2" data-priority="2">สำคัญมาก</button></div></div></div></div>`;
         const modalContent = modal.querySelector('.modal-content');
         modalContent.className = 'modal-content';
         if (task.status === 'completed') { modalContent.classList.add('is-completed'); }
         else { modalContent.classList.add('is-readonly'); }
-
         modal.querySelector('#modal-task-title').textContent = task.title;
         const subtaskListUL = modal.querySelector('.subtask-list');
         subtaskListUL.innerHTML = '';
@@ -252,12 +272,20 @@
             item.querySelector('input').addEventListener('change', e => updateProgress(taskId, e.target));
             subtaskListUL.appendChild(item);
         });
-        
+        modal.querySelector(`#priority-btn-${task.priority}`).classList.add('selected');
+        modal.querySelectorAll('.priority-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newPriority = parseInt(btn.dataset.priority);
+                task.priority = newPriority;
+                modal.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                renderBoard();
+            });
+        });
         modal.querySelector('#modal-close-btn').addEventListener('click', closeModal);
         modal.querySelector('#modal-edit-btn').addEventListener('click', handleEditClick);
         modal.querySelector('#modal-delete-btn').addEventListener('click', handleDeleteClick);
         modal.querySelector('.add-subtask-form').addEventListener('submit', handleAddSubtask);
-
         modal.classList.remove('modal-hidden');
     }
 
@@ -328,7 +356,7 @@
         if (title && title.trim().toLowerCase() === 'eakkachai') {
             showEasterEggModal();
         } else if (title && title.trim()) {
-            tasks.push({ id: `task-${Date.now()}`, title: title.trim(), status: 'not-started', subtasks: [] });
+            tasks.push({ id: `task-${Date.now()}`, title: title.trim(), status: 'not-started', subtasks: [], priority: 0 });
             renderBoard();
         }
     });
@@ -383,6 +411,19 @@
     }
     
     easterEggCloseBtn.addEventListener('click', startQuiz);
+    
+    resetDataBtn.addEventListener('click', async () => {
+        const isConfirmed = await showDialog({
+            title: 'ยืนยันการรีเซ็ต',
+            message: 'คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลงานทั้งหมด? ข้อมูลที่ลบไปแล้วจะไม่สามารถกู้คืนได้',
+            confirmText: 'ใช่, รีเซ็ตเลย',
+            cancelText: 'ยกเลิก'
+        });
+        if (isConfirmed) {
+            localStorage.removeItem('kanbanTasks');
+            location.reload();
+        }
+    });
     
     loadTasks();
     loadTheme();
