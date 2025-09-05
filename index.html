@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Kanban Board (with Memory)</title>
+    <style>
+        :root {
+            --primary-color: #0079bf;
+            --background-color: #f4f7f9;
+            --column-bg: #ebecf0;
+            --card-bg: #ffffff;
+            --modal-backdrop: rgba(0,0,0,0.6);
+        }
+        body { font-family: 'Sarabun', sans-serif; background-color: var(--primary-color); overflow-x: auto; min-height: 100vh; }
+        .top-bar { padding: 15px 30px; background-color: rgba(0,0,0,0.2); }
+        #create-task-btn { padding: 10px 20px; font-size: 1em; background-color: #5aac44; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .kanban-board { display: flex; gap: 15px; padding: 30px; align-items: flex-start; }
+        .kanban-column { background-color: var(--column-bg); border-radius: 8px; padding: 15px; width: 320px; flex-shrink: 0; }
+        .kanban-column h2 { margin-top: 0; font-size: 1.2em; }
+        .cards-container { min-height: 100px; display: flex; flex-direction: column; gap: 10px; }
+        .task-card { background-color: var(--card-bg); border-radius: 5px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: grab; }
+        .task-card.dragging { opacity: 0.5; transform: rotate(3deg); }
+        .task-card h4 { margin: 0 0 10px 0; }
+        .progress-bar { width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background-color: #76c7c0; transition: width 0.3s ease; }
+        .start-btn { margin-top: 10px; padding: 5px 10px; background-color: #4a90e2; color:white; border:none; border-radius:3px; cursor:pointer;}
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--modal-backdrop); display: flex; justify-content: center; align-items: center; }
+        .modal-hidden { display: none; }
+        .modal-content { background-color: var(--background-color); padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; }
+        .modal-close-btn { font-size: 1.5em; cursor: pointer; border:none; background:none; }
+        .subtask-list { list-style: none; padding: 0; margin: 15px 0; max-height: 200px; overflow-y: auto;}
+        .subtask-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #dfe7ef; }
+        .subtask-item input[type="checkbox"] { margin-right: 12px; width: 18px; height: 18px; }
+        .subtask-item label { flex-grow: 1; }
+        .subtask-item input:checked + label { text-decoration: line-through; color: #999; }
+        .add-subtask-form { display: flex; gap: 10px; margin-top: 10px; }
+        .task-input { flex-grow: 1; padding: 10px; border: 1px solid #dfe7ef; border-radius: 5px; }
+        .add-button { background-color: var(--primary-color); color: white; border: none; padding: 0 20px; border-radius: 5px; cursor: pointer;}
+    </style>
+</head>
+<body>
+    <header class="top-bar">
+        <button id="create-task-btn">สร้างบล็อกใหม่ (+)</button>
+    </header>
+    <main class="kanban-board">
+        <div class="kanban-column" id="not-started-col">
+            <h2>ยังไม่ดำเนินการ</h2>
+            <div class="cards-container"></div>
+        </div>
+        <div class="kanban-column" id="in-progress-col">
+            <h2>กำลังทำงาน</h2>
+            <div class="cards-container"></div>
+        </div>
+        <div class="kanban-column" id="completed-col">
+            <h2>สำเร็จแล้ว</h2>
+            <div class="cards-container"></div>
+        </div>
+    </main>
+    <div id="task-modal" class="modal-backdrop modal-hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-task-title"></h2>
+                <button id="modal-close-btn">&times;</button>
+            </div>
+            <div id="modal-subtasks-container">
+                <ul class="subtask-list"></ul>
+                <form class="add-subtask-form">
+                    <input type="text" class="task-input" placeholder="เพิ่มขั้นตอนย่อย..." required>
+                    <button type="submit" class="add-button">เพิ่ม</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- JAVASCRIPT LOGIC ---
+    let tasks = []; // --- MODIFIED: เริ่มต้นด้วย Array ว่างๆเสมอ
+    let currentlyOpenTaskId = null;
+
+    const createTaskBtn = document.getElementById('create-task-btn');
+    const columns = document.querySelectorAll('.kanban-column');
+    const modal = document.getElementById('task-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+
+    // --- NEW: ฟังก์ชันสำหรับบันทึกข้อมูลลง localStorage ---
+    function saveTasks() {
+        // localStorage เก็บได้แค่ String เราจึงต้องแปลง Array `tasks` ของเราให้เป็น JSON String ก่อน
+        localStorage.setItem('kanbanTasks', JSON.stringify(tasks));
+    }
+
+    // --- NEW: ฟังก์ชันสำหรับโหลดข้อมูลจาก localStorage ---
+    function loadTasks() {
+        const savedTasks = localStorage.getItem('kanbanTasks');
+        if (savedTasks) {
+            // ถ้ามีข้อมูลที่เคยบันทึกไว้ ให้แปลง JSON String กลับมาเป็น Array แล้วใส่ใน `tasks`
+            tasks = JSON.parse(savedTasks);
+        }
+        // ถ้าไม่มีข้อมูลที่บันทึกไว้ `tasks` ก็จะเป็น Array ว่างๆเหมือนเดิม
+    }
+
+
+    function renderBoard() {
+        document.querySelectorAll('.cards-container').forEach(container => container.innerHTML = '');
+        tasks.forEach(task => {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'task-card';
+            cardElement.draggable = true;
+            cardElement.dataset.taskId = task.id;
+            const totalSubtasks = task.subtasks.length;
+            const completedSubtasks = task.subtasks.filter(st => st.done).length;
+            const progress = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
+            let startButtonHTML = '';
+            if (task.status === 'not-started') {
+                startButtonHTML = `<button class="start-btn">เริ่มทำงาน</button>`;
+            }
+            cardElement.innerHTML = `
+                <h4>${task.title}</h4>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" style="width: ${progress}%;"></div>
+                </div>
+                ${startButtonHTML}
+            `;
+            document.querySelector(`#${task.status}-col .cards-container`).appendChild(cardElement);
+        });
+        addCardEventListeners();
+        
+        // --- NEW: บันทึกข้อมูลทุกครั้งที่มีการวาดบอร์ดใหม่ ---
+        saveTasks();
+    }
+    
+    function addCardEventListeners() {
+        document.querySelectorAll('.task-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.classList.contains('start-btn')) return;
+                openModal(card.dataset.taskId);
+            });
+            card.addEventListener('dragstart', () => {
+                card.classList.add('dragging');
+                event.dataTransfer.setData('text/plain', card.dataset.taskId);
+            });
+            card.addEventListener('dragend', () => card.classList.remove('dragging'));
+        });
+
+        document.querySelectorAll('.start-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const taskId = e.target.closest('.task-card').dataset.taskId;
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = 'in-progress';
+                    renderBoard();
+                }
+            });
+        });
+    }
+
+    function openModal(taskId) {
+        currentlyOpenTaskId = taskId;
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+        document.getElementById('modal-task-title').textContent = task.title;
+        const subtaskListUL = modal.querySelector('.subtask-list');
+        subtaskListUL.innerHTML = '';
+        task.subtasks.forEach((subtask, index) => {
+            const item = document.createElement('li');
+            item.className = 'subtask-item';
+            item.innerHTML = `
+                <input type="checkbox" id="subtask-${index}" ${subtask.done ? 'checked' : ''}>
+                <label for="subtask-${index}">${subtask.text}</label>
+            `;
+            item.querySelector('input').addEventListener('change', () => {
+                subtask.done = !subtask.done;
+                updateProgress(taskId);
+            });
+            subtaskListUL.appendChild(item);
+        });
+        modal.classList.remove('modal-hidden');
+    }
+    
+    function closeModal() {
+        modal.classList.add('modal-hidden');
+        currentlyOpenTaskId = null;
+    }
+
+    createTaskBtn.addEventListener('click', () => {
+        const title = prompt('กรุณาใส่ชื่อหัวข้อใหม่:');
+        if (title && title.trim() !== '') {
+            const newTask = {
+                id: `task-${Date.now()}`,
+                title: title.trim(),
+                status: 'not-started',
+                subtasks: []
+            };
+            tasks.push(newTask);
+            renderBoard();
+        }
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+
+    modal.querySelector('.add-subtask-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = e.target.querySelector('.task-input');
+        const text = input.value.trim();
+        if (text && currentlyOpenTaskId) {
+            const task = tasks.find(t => t.id === currentlyOpenTaskId);
+            task.subtasks.push({ text: text, done: false });
+            input.value = '';
+            openModal(currentlyOpenTaskId);
+
+            // --- MODIFIED: ไม่จำเป็นต้องเรียก updateProgress อีก เพราะ openModal ไม่ได้ render บอร์ด
+            // เราจะเรียก renderBoard() โดยตรงหลังจากปิด Modal หรือเมื่อมีการติ๊ก
+            // แต่เพื่อความง่าย เราจะเรียก updateProgress ที่จะ re-render ให้อยู่แล้ว
+            updateProgress(currentlyOpenTaskId); 
+        }
+    });
+
+    columns.forEach(column => {
+        column.addEventListener('dragover', e => e.preventDefault());
+        column.addEventListener('drop', e => {
+            e.preventDefault();
+            const taskId = e.dataTransfer.getData('text/plain');
+            const newStatus = column.id.replace('-col', '');
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                // ป้องกันไม่ให้การ์ดที่เสร็จแล้วถูกลากกลับไปสถานะอื่น
+                if (task.status === 'completed' && newStatus !== 'completed') {
+                    return; // ไม่ทำอะไรเลย
+                }
+                task.status = newStatus;
+                renderBoard();
+            }
+        });
+    });
+
+    function updateProgress(taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+        const total = task.subtasks.length;
+        const completed = task.subtasks.filter(st => st.done).length;
+        if (total > 0 && completed === total && task.status !== 'completed') {
+            task.status = 'completed';
+        }
+        renderBoard();
+    }
+    
+    // --- MODIFIED: ลำดับการทำงานเมื่อเริ่มต้นแอปพลิเคชัน ---
+    // 1. โหลดข้อมูลจาก localStorage มาใส่ใน `tasks`
+    loadTasks();
+    // 2. วาดบอร์ดจากข้อมูลที่โหลดมา (หรือจาก Array ว่างๆถ้าไม่มีข้อมูล)
+    renderBoard();
+
+    </script>
+</body>
+</html>
