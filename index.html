@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Kanban Board (Final Version)</title>
+    <title>Ultimate Kanban Board (Final Corrected Version)</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -17,24 +17,8 @@
         body.theme-pink { --primary-color: #8e44ad; --success-color: #9b59b6; --progress-bar-fill: #d7bde2; --danger-color: #c0392b; --body-bg: var(--primary-color); }
         
         body { font-family: 'Sarabun', sans-serif; background-color: var(--body-bg); overflow-x: auto; min-height: 100vh; margin: 0; transition: background-color 0.3s ease; }
-        
-        /* --- MODIFIED: Simplified Header Structure for better mobile wrapping --- */
-        .top-bar { 
-            padding: 15px 30px; 
-            background-color: rgba(0,0,0,0.2); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            flex-wrap: wrap; 
-            gap: 15px;
-        }
-        .top-bar-group { 
-            display: flex; 
-            align-items: center; 
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
+        .top-bar { padding: 15px 30px; background-color: rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .top-bar-group { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
         #create-task-btn { background-color: var(--success-color); transition: background-color 0.3s ease; padding: 10px 20px; font-size: 1em; color: white; border: none; border-radius: 5px; cursor: pointer; }
         #reset-data-btn { background-color: var(--danger-color); padding: 10px 15px; font-size: 0.9em; color: white; border: none; border-radius: 5px; cursor: pointer; }
         #device-info { color: white; font-size: 0.9em; background-color: rgba(255, 255, 255, 0.2); padding: 5px 10px; border-radius: 5px; }
@@ -71,10 +55,10 @@
         #modal-edit-btn { background-color: var(--edit-color); color: white; }
         #modal-delete-btn { background-color: var(--danger-color); color: white; }
         .modal-close-btn { font-size: 1.5em; cursor: pointer; border:none; background:none; padding: 0; }
-        #modal-subtasks-container { overflow-y: auto; padding-right: 15px; -webkit-overflow-scrolling: touch; /* NEW: Smoother scrolling on iOS */ }
+        #modal-subtasks-container { overflow-y: auto; padding-right: 15px; -webkit-overflow-scrolling: touch; }
         .description-container { margin-top: 15px; }
         .description-container p { margin: 0 0 5px 0; font-weight: bold; }
-        #task-description { width: 100%; box-sizing: border-box; min-height: 80px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Sarabun', sans-serif; font-size: 1em; resize: vertical; -webkit-overflow-scrolling: touch; /* NEW: Smoother scrolling on iOS */ }
+        #task-description { width: 100%; box-sizing: border-box; min-height: 80px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Sarabun', sans-serif; font-size: 1em; resize: vertical; -webkit-overflow-scrolling: touch; }
         #task-description:read-only { background-color: #ebecf0; border-color: transparent; color: #555; }
         .subtask-list { list-style: none; padding: 0; margin: 15px 0; max-height: 200px; overflow-y: auto;}
         .subtask-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #dfe7ef; }
@@ -147,279 +131,313 @@
 
     <div id="task-modal" class="modal-backdrop modal-hidden"></div>
     <div id="custom-dialog" class="modal-backdrop modal-hidden"></div>
-    <div id="easter-egg-modal" class="modal-backdrop modal-hidden"></div>
+    
+    <div id="easter-egg-modal" class="modal-backdrop modal-hidden">
+        <div class="easter-egg-content">
+            <div class="modal-header">
+                <h2>พบ Easter Egg!</h2>
+                <button id="easter-egg-close-btn" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="formula-screen">
+                <h3>กฎการเคลื่อนที่ข้อที่ 1 ของนิวตัน (Law of Inertia)</h3>
+                <p>"วัตถุจะรักษาสภาพหยุดนิ่ง หรือเคลื่อนที่ด้วยความเร็วคงที่ในแนวเส้นตรง..."</p>
+                <div class="formula">$$ \sum \vec{F} = 0 \Leftrightarrow \vec{a} = 0 $$</div>
+                <h3>กฎการเคลื่อนที่ข้อที่ 2 ของนิวตัน (Law of Acceleration)</h3>
+                <p>"ความเร่งของวัตถุจะแปรผันตรงกับแรงลัพธ์ที่กระทำต่อวัตถุ..."</p>
+                <div class="formula">$$ \sum \vec{F} = m\vec{a} $$</div>
+                <h3>กฎการเคลื่อนที่ข้อที่ 3 ของนิวตัน (Law of Action-Reaction)</h3>
+                <p>"ทุกแรงกิริยา ย่อมมีแรงปฏิกิริยาที่มีขนาดเท่ากัน แต่มีทิศทางตรงกันข้ามเสมอ"</p>
+                <div class="formula">$$ \vec{F}_{AB} = -\vec{F}_{BA} $$</div>
+            </div>
+            <div id="quiz-screen" class="hidden">
+                <p class="quiz-question"></p>
+                <div class="quiz-options"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
-    // The JavaScript code is identical to the last version (Final Stable Version 2.0).
-    // No changes are needed in the script. The fixes are in HTML and CSS.
-    let tasks = [];
-    let currentlyOpenTaskId = null;
+    // --- WRAP ALL CODE IN DOMContentLoaded TO ENSURE THE DOM IS READY ---
+    document.addEventListener('DOMContentLoaded', () => {
 
-    const body = document.body;
-    const createTaskBtn = document.getElementById('create-task-btn');
-    const resetDataBtn = document.getElementById('reset-data-btn');
-    const columns = document.querySelectorAll('.kanban-column');
-    const modal = document.getElementById('task-modal');
-    const dialog = document.getElementById('custom-dialog');
-    const deviceInfoDiv = document.getElementById('device-info');
-    const themeBtn = document.getElementById('theme-btn');
-    const themePanel = document.querySelector('.theme-panel');
-    const easterEggModal = document.getElementById('easter-egg-modal');
-    
-    const quiz = {
-        question: "วัตถุ A ผลักวัตถุ B ด้วยแรง 10 นิวตัน วัตถุ B จะผลักวัตถุ A กลับด้วยแรงเท่าใดและในทิศทางใด?",
-        options: [ "10 นิวตัน, ทิศทางเดียวกัน", "10 นิวตัน, ทิศทางตรงกันข้าม", "น้อยกว่า 10 นิวตัน", "ขึ้นอยู่กับมวลของวัตถุ A และ B" ],
-        correctAnswerIndex: 1
-    };
+        // --- STATE & ELEMENT SELECTIONS ---
+        let tasks = [];
+        let currentlyOpenTaskId = null;
 
-    function applyTheme(themeName) { body.className = ''; body.classList.add(themeName); }
-    function saveTheme(themeName) { localStorage.setItem('kanbanTheme', themeName); }
-    function loadTheme() {
-        const savedTheme = localStorage.getItem('kanbanTheme') || 'theme-default';
-        applyTheme(savedTheme);
-    }
+        const body = document.body;
+        const createTaskBtn = document.getElementById('create-task-btn');
+        const resetDataBtn = document.getElementById('reset-data-btn');
+        const columns = document.querySelectorAll('.kanban-column');
+        const modal = document.getElementById('task-modal');
+        const dialog = document.getElementById('custom-dialog');
+        const deviceInfoDiv = document.getElementById('device-info');
+        const themeBtn = document.getElementById('theme-btn');
+        const themePanel = document.querySelector('.theme-panel');
+        const easterEggModal = document.getElementById('easter-egg-modal');
+        
+        const quiz = {
+            question: "วัตถุ A ผลักวัตถุ B ด้วยแรง 10 นิวตัน วัตถุ B จะผลักวัตถุ A กลับด้วยแรงเท่าใดและในทิศทางใด?",
+            options: [ "10 นิวตัน, ทิศทางเดียวกัน", "10 นิวตัน, ทิศทางตรงกันข้าม", "น้อยกว่า 10 นิวตัน", "ขึ้นอยู่กับมวลของวัตถุ A และ B" ],
+            correctAnswerIndex: 1
+        };
 
-    function showDialog({ title, message, showInput = false, confirmText = 'ตกลง', cancelText = 'ยกเลิก' }) {
-        return new Promise(resolve => {
-            dialog.innerHTML = `<div class="dialog-content"><h3>${title}</h3><p>${message}</p><input type="text" class="dialog-input" style="display: ${showInput ? 'block' : 'none'};"><div class="dialog-buttons"><button class="dialog-cancel-btn">${cancelText}</button><button class="dialog-confirm-btn">${confirmText}</button></div></div>`;
-            const input = dialog.querySelector('.dialog-input');
-            const confirmBtn = dialog.querySelector('.dialog-confirm-btn');
-            const cancelBtn = dialog.querySelector('.dialog-cancel-btn');
-            dialog.classList.remove('modal-hidden');
-            const onConfirm = () => { cleanup(); resolve(showInput ? input.value : true); };
-            const onCancel = () => { cleanup(); resolve(showInput ? null : false); };
-            const cleanup = () => { dialog.classList.add('modal-hidden'); confirmBtn.removeEventListener('click', onConfirm); cancelBtn.removeEventListener('click', onCancel); };
-            confirmBtn.addEventListener('click', onConfirm);
-            cancelBtn.addEventListener('click', onCancel);
-        });
-    }
+        // --- FUNCTIONS (ALL FUNCTIONS ARE DEFINED HERE) ---
 
-    function saveTasks() { localStorage.setItem('kanbanTasks', JSON.stringify(tasks)); }
-    function loadTasks() {
-        const savedTasks = localStorage.getItem('kanbanTasks');
-        if (savedTasks) {
-            try {
-                tasks = JSON.parse(savedTasks);
-                tasks.forEach(task => {
-                    if (task.priority === undefined) { task.priority = 0; }
-                    if (task.description === undefined) { task.description = ''; }
+        function applyTheme(themeName) { body.className = ''; body.classList.add(themeName); }
+        function saveTheme(themeName) { localStorage.setItem('kanbanTheme', themeName); }
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('kanbanTheme') || 'theme-default';
+            applyTheme(savedTheme);
+        }
+
+        function showDialog({ title, message, showInput = false, confirmText = 'ตกลง', cancelText = 'ยกเลิก' }) {
+            return new Promise(resolve => {
+                dialog.innerHTML = `<div class="dialog-content"><h3>${title}</h3><p>${message}</p><input type="text" class="dialog-input" style="display: ${showInput ? 'block' : 'none'};"><div class="dialog-buttons"><button class="dialog-cancel-btn">${cancelText}</button><button class="dialog-confirm-btn">${confirmText}</button></div></div>`;
+                const input = dialog.querySelector('.dialog-input');
+                const confirmBtn = dialog.querySelector('.dialog-confirm-btn');
+                const cancelBtn = dialog.querySelector('.dialog-cancel-btn');
+                dialog.classList.remove('modal-hidden');
+                const onConfirm = () => { cleanup(); resolve(showInput ? input.value : true); };
+                const onCancel = () => { cleanup(); resolve(showInput ? null : false); };
+                const cleanup = () => { dialog.classList.add('modal-hidden'); confirmBtn.removeEventListener('click', onConfirm); cancelBtn.removeEventListener('click', onCancel); };
+                confirmBtn.addEventListener('click', onConfirm);
+                cancelBtn.addEventListener('click', onCancel);
+            });
+        }
+
+        function saveTasks() { localStorage.setItem('kanbanTasks', JSON.stringify(tasks)); }
+        function loadTasks() {
+            const savedTasks = localStorage.getItem('kanbanTasks');
+            if (savedTasks) {
+                try {
+                    tasks = JSON.parse(savedTasks);
+                    tasks.forEach(task => {
+                        if (task.priority === undefined) { task.priority = 0; }
+                        if (task.description === undefined) { task.description = ''; }
+                    });
+                } catch (e) { console.error("Error parsing tasks from localStorage", e); tasks = []; }
+            }
+        }
+
+        function renderBoard() {
+            document.querySelectorAll('.cards-container').forEach(c => c.innerHTML = '');
+            const statuses = ['not-started', 'in-progress', 'completed'];
+            statuses.forEach(status => {
+                const columnTasks = tasks.filter(task => task.status === status);
+                columnTasks.sort((a, b) => b.priority - a.priority);
+                const container = document.querySelector(`#${status}-col .cards-container`);
+                columnTasks.forEach(task => {
+                    const card = document.createElement('div');
+                    card.className = 'task-card';
+                    card.classList.add(`priority-${task.priority}`);
+                    card.draggable = task.status !== 'completed';
+                    card.dataset.taskId = task.id;
+                    card.dataset.status = task.status;
+                    const total = task.subtasks.length;
+                    const completed = task.subtasks.filter(st => st.done).length;
+                    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+                    const startBtn = task.status === 'not-started' ? `<button class="start-btn">เริ่มทำงาน</button>` : '';
+                    card.innerHTML = `<div class="priority-indicator"></div><h4 class="task-title">${task.title}</h4><div class="progress-container"><div class="progress-bar"><div class="progress-bar-fill" style="width: ${progress}%;"></div></div><span class="progress-percentage">${progress}%</span></div>${startBtn}`;
+                    container.appendChild(card);
                 });
-            } catch (e) { console.error("Error parsing tasks from localStorage", e); tasks = []; }
-        }
-    }
-
-    function renderBoard() {
-        document.querySelectorAll('.cards-container').forEach(c => c.innerHTML = '');
-        const statuses = ['not-started', 'in-progress', 'completed'];
-        statuses.forEach(status => {
-            const columnTasks = tasks.filter(task => task.status === status);
-            columnTasks.sort((a, b) => b.priority - a.priority);
-            const container = document.querySelector(`#${status}-col .cards-container`);
-            columnTasks.forEach(task => {
-                const card = document.createElement('div');
-                card.className = 'task-card';
-                card.classList.add(`priority-${task.priority}`);
-                card.draggable = task.status !== 'completed';
-                card.dataset.taskId = task.id;
-                card.dataset.status = task.status;
-                const total = task.subtasks.length;
-                const completed = task.subtasks.filter(st => st.done).length;
-                const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const startBtn = task.status === 'not-started' ? `<button class="start-btn">เริ่มทำงาน</button>` : '';
-                card.innerHTML = `<div class="priority-indicator"></div><h4 class="task-title">${task.title}</h4><div class="progress-container"><div class="progress-bar"><div class="progress-bar-fill" style="width: ${progress}%;"></div></div><span class="progress-percentage">${progress}%</span></div>${startBtn}`;
-                container.appendChild(card);
             });
-        });
-        addCardEventListeners();
-        saveTasks();
-    }
-    
-    function addCardEventListeners() {
-        document.querySelectorAll('.task-card').forEach(card => {
-            card.addEventListener('click', e => { if (!e.target.classList.contains('start-btn')) openModal(card.dataset.taskId); });
-            card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', card.dataset.taskId); });
-            card.addEventListener('dragend', () => card.classList.remove('dragging'));
-        });
-        document.querySelectorAll('.start-btn').forEach(btn => {
-            btn.addEventListener('click', e => {
-                const task = tasks.find(t => t.id === e.target.closest('.task-card').dataset.taskId);
-                if (task) { task.status = 'in-progress'; renderBoard(); }
-            });
-        });
-    }
-
-    function openModal(taskId, initialEditMode = false) {
-        currentlyOpenTaskId = taskId;
-        const task = tasks.find(t => t.id === taskId);
-        if (!task) return;
-        const isEditing = initialEditMode;
-        const titleElement = isEditing 
-            ? `<input type="text" id="modal-task-title-input" class="task-input" value="${task.title}">`
-            : `<h2 id="modal-task-title">${task.title}</h2>`;
-        modal.innerHTML = `<div class="modal-content"><div class="modal-header">${titleElement}<div class="modal-header-controls"><button id="modal-edit-btn">${isEditing ? 'Done' : 'Edit'}</button><button id="modal-delete-btn">Delete Task</button><button id="modal-close-btn">&times;</button></div></div><div id="modal-subtasks-container"><div class="description-container"><p>คำอธิบาย</p><textarea id="task-description" rows="4" placeholder="เพิ่มคำอธิบายรายละเอียด..." ${isEditing ? '' : 'readonly'}>${task.description || ''}</textarea></div><ul class="subtask-list"></ul><form class="add-subtask-form"><input type="text" class="task-input" placeholder="เพิ่มขั้นตอนย่อย..." required><button type="submit" class="add-button">เพิ่ม</button></form><div class="priority-controls"><p>ระดับความสำคัญ</p><div class="priority-buttons"><button class="priority-btn" id="priority-btn-0" data-priority="0">ปกติ</button><button class="priority-btn" id="priority-btn-1" data-priority="1">สำคัญ</button><button class="priority-btn" id="priority-btn-2" data-priority="2">สำคัญมาก</button></div></div></div></div>`;
-        const modalContent = modal.querySelector('.modal-content');
-        if (task.status === 'completed') { modalContent.classList.add('is-completed'); } 
-        else if (isEditing) { modalContent.classList.add('is-editing'); }
-        else { modalContent.classList.add('is-readonly'); }
-        const subtaskListUL = modal.querySelector('.subtask-list');
-        subtaskListUL.innerHTML = '';
-        task.subtasks.forEach((subtask, index) => {
-            const item = document.createElement('li');
-            item.className = 'subtask-item';
-            item.innerHTML = `<input type="checkbox" id="subtask-${index}" ${subtask.done ? 'checked' : ''}><label for="subtask-${index}">${subtask.text}</label>`;
-            item.querySelector('input').addEventListener('change', e => updateProgress(taskId, e.target));
-            subtaskListUL.appendChild(item);
-        });
-        modal.querySelector(`#priority-btn-${task.priority}`).classList.add('selected');
-        modal.querySelectorAll('.priority-btn').forEach(btn => {
-            btn.addEventListener('click', () => { if (modalContent.classList.contains('is-editing')) { const newPriority = parseInt(btn.dataset.priority); task.priority = newPriority; modal.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); saveTasks(); renderBoard(); }});
-        });
-        modal.querySelector('#modal-close-btn').addEventListener('click', closeModal);
-        modal.querySelector('#modal-edit-btn').addEventListener('click', handleEditClick);
-        modal.querySelector('#modal-delete-btn').addEventListener('click', handleDeleteClick);
-        modal.querySelector('.add-subtask-form').addEventListener('submit', handleAddSubtask);
-        const titleInput = modal.querySelector('#modal-task-title-input');
-        if (titleInput) {
-            titleInput.addEventListener('blur', saveChanges);
-            titleInput.addEventListener('keypress', e => { if (e.key === 'Enter') { saveChanges(); titleInput.blur(); }});
-            titleInput.focus();
+            addCardEventListeners();
+            saveTasks();
         }
-        modal.querySelector('#task-description').addEventListener('blur', saveChanges);
-        modal.classList.remove('modal-hidden');
-    }
+        
+        function addCardEventListeners() {
+            document.querySelectorAll('.task-card').forEach(card => {
+                card.addEventListener('click', e => { if (!e.target.classList.contains('start-btn')) openModal(card.dataset.taskId, false); });
+                card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', card.dataset.taskId); });
+                card.addEventListener('dragend', () => card.classList.remove('dragging'));
+            });
+            document.querySelectorAll('.start-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    const task = tasks.find(t => t.id === e.target.closest('.task-card').dataset.taskId);
+                    if (task) { task.status = 'in-progress'; renderBoard(); }
+                });
+            });
+        }
 
-    function saveChanges() {
-        if (!currentlyOpenTaskId) return;
-        const task = tasks.find(t => t.id === currentlyOpenTaskId);
-        if (!task) return;
-        const titleInput = modal.querySelector('#modal-task-title-input');
-        const descriptionTextarea = modal.querySelector('#task-description');
-        if (titleInput) { const newTitle = titleInput.value.trim(); if (newTitle) { task.title = newTitle; } else { titleInput.value = task.title; } }
-        if (descriptionTextarea) { task.description = descriptionTextarea.value.trim(); }
-        renderBoard();
-    }
+        function openModal(taskId, initialEditMode = false) {
+            currentlyOpenTaskId = taskId;
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const isEditing = initialEditMode;
+            const titleElement = isEditing 
+                ? `<input type="text" id="modal-task-title-input" class="task-input" value="${task.title}">`
+                : `<h2 id="modal-task-title">${task.title}</h2>`;
+            modal.innerHTML = `<div class="modal-content"><div class="modal-header">${titleElement}<div class="modal-header-controls"><button id="modal-edit-btn">${isEditing ? 'Done' : 'Edit'}</button><button id="modal-delete-btn">Delete Task</button><button id="modal-close-btn">&times;</button></div></div><div id="modal-subtasks-container"><div class="description-container"><p>คำอธิบาย</p><textarea id="task-description" rows="4" placeholder="เพิ่มคำอธิบายรายละเอียด..." ${isEditing ? '' : 'readonly'}>${task.description || ''}</textarea></div><ul class="subtask-list"></ul><form class="add-subtask-form"><input type="text" class="task-input" placeholder="เพิ่มขั้นตอนย่อย..." required><button type="submit" class="add-button">เพิ่ม</button></form><div class="priority-controls"><p>ระดับความสำคัญ</p><div class="priority-buttons"><button class="priority-btn" id="priority-btn-0" data-priority="0">ปกติ</button><button class="priority-btn" id="priority-btn-1" data-priority="1">สำคัญ</button><button class="priority-btn" id="priority-btn-2" data-priority="2">สำคัญมาก</button></div></div></div></div>`;
+            const modalContent = modal.querySelector('.modal-content');
+            if (task.status === 'completed') { modalContent.classList.add('is-completed'); } 
+            else if (isEditing) { modalContent.classList.add('is-editing'); }
+            else { modalContent.classList.add('is-readonly'); }
+            const subtaskListUL = modal.querySelector('.subtask-list');
+            subtaskListUL.innerHTML = '';
+            task.subtasks.forEach((subtask, index) => {
+                const item = document.createElement('li');
+                item.className = 'subtask-item';
+                item.innerHTML = `<input type="checkbox" id="subtask-${index}" ${subtask.done ? 'checked' : ''}><label for="subtask-${index}">${subtask.text}</label>`;
+                item.querySelector('input').addEventListener('change', e => updateProgress(taskId, e.target));
+                subtaskListUL.appendChild(item);
+            });
+            modal.querySelector(`#priority-btn-${task.priority}`).classList.add('selected');
+            modal.querySelectorAll('.priority-btn').forEach(btn => {
+                btn.addEventListener('click', () => { if (modalContent.classList.contains('is-editing')) { const newPriority = parseInt(btn.dataset.priority); task.priority = newPriority; modal.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); saveTasks(); renderBoard(); }});
+            });
+            modal.querySelector('#modal-close-btn').addEventListener('click', closeModal);
+            modal.querySelector('#modal-edit-btn').addEventListener('click', handleEditClick);
+            modal.querySelector('#modal-delete-btn').addEventListener('click', handleDeleteClick);
+            modal.querySelector('.add-subtask-form').addEventListener('submit', handleAddSubtask);
+            const titleInput = modal.querySelector('#modal-task-title-input');
+            if (titleInput) {
+                titleInput.addEventListener('blur', saveChanges);
+                titleInput.addEventListener('keypress', e => { if (e.key === 'Enter') { saveChanges(); titleInput.blur(); }});
+                titleInput.focus();
+            }
+            modal.querySelector('#task-description').addEventListener('blur', saveChanges);
+            modal.classList.remove('modal-hidden');
+        }
 
-    function handleEditClick() {
-        saveChanges();
-        const isCurrentlyEditing = modal.querySelector('.modal-content.is-editing');
-        openModal(currentlyOpenTaskId, !isCurrentlyEditing);
-    }
-    
-    async function handleDeleteClick() {
-        if (!currentlyOpenTaskId) return;
-        const task = tasks.find(t => t.id === currentlyOpenTaskId);
-        const isConfirmed = await showDialog({ title: 'ยืนยันการลบ', message: `คุณแน่ใจหรือไม่ว่าต้องการลบงาน "${task.title}"?`, confirmText: 'ลบ', cancelText: 'ไม่' });
-        if (isConfirmed) { tasks = tasks.filter(t => t.id !== currentlyOpenTaskId); closeModal(); renderBoard(); }
-    }
-
-    function handleAddSubtask(e) {
-        e.preventDefault();
-        const input = e.target.querySelector('.task-input');
-        const text = input.value.trim();
-        if (text && currentlyOpenTaskId) {
+        function saveChanges() {
+            if (!currentlyOpenTaskId) return;
             const task = tasks.find(t => t.id === currentlyOpenTaskId);
-            task.subtasks.push({ text: text, done: false });
-            input.value = '';
-            openModal(currentlyOpenTaskId, true); 
-            updateProgress(currentlyOpenTaskId, null); 
-        }
-    }
-    
-    function closeModal() { if (modal.querySelector('.modal-content.is-editing')) { saveChanges(); } modal.classList.add('modal-hidden'); currentlyOpenTaskId = null; }
-
-    function detectAndShowDeviceType() {
-        const userAgent = navigator.userAgent;
-        let deviceType = "คอมพิวเตอร์";
-        if (/iPad|Tablet/i.test(userAgent)) deviceType = "แท็บเล็ต";
-        else if (/Mobi|Android|iPhone/i.test(userAgent)) deviceType = "มือถือ";
-        deviceInfoDiv.textContent = `มุมมองสำหรับ: ${deviceType}`;
-    }
-
-    async function updateProgress(taskId, checkboxElement) {
-        const task = tasks.find(t => t.id === taskId);
-        if (!task) return;
-        const subtaskList = modal.querySelectorAll('.subtask-item input');
-        subtaskList.forEach((cb, index) => { if (task.subtasks[index]) task.subtasks[index].done = cb.checked; });
-        const total = task.subtasks.length;
-        const completed = task.subtasks.filter(st => st.done).length;
-        if (total > 0 && completed === total && task.status !== 'completed') {
-            const isConfirmed = await showDialog({ title: 'ยืนยันการสำเร็จงาน', message: 'ทุกขั้นตอนเสร็จสิ้นแล้ว ยืนยันเพื่อย้ายงานนี้ไปที่ "สำเร็จแล้ว"?', confirmText: 'ยืนยัน' });
-            if (isConfirmed) { task.status = 'completed'; closeModal(); } 
-            else { if (checkboxElement) checkboxElement.checked = false; task.subtasks.forEach((st, i) => { if(subtaskList[i]) st.done = subtaskList[i].checked; }); }
-        }
-        renderBoard();
-    }
-
-    createTaskBtn.addEventListener('click', async () => {
-        const title = await showDialog({ title: 'สร้างบล็อกใหม่', message: 'กรุณาใส่ชื่อหัวข้อของงาน:', showInput: true, confirmText: 'สร้าง' });
-        if (title && title.trim().toLowerCase() === 'eakkachai') { showEasterEggModal(); } 
-        else if (title && title.trim()) {
-            tasks.push({ id: `task-${Date.now()}`, title: title.trim(), status: 'not-started', subtasks: [], priority: 0, description: '' });
+            if (!task) return;
+            const titleInput = modal.querySelector('#modal-task-title-input');
+            const descriptionTextarea = modal.querySelector('#task-description');
+            if (titleInput) { const newTitle = titleInput.value.trim(); if (newTitle) { task.title = newTitle; } else { titleInput.value = task.title; } }
+            if (descriptionTextarea) { task.description = descriptionTextarea.value.trim(); }
             renderBoard();
         }
-    });
 
-    resetDataBtn.addEventListener('click', async () => {
-        const isConfirmed = await showDialog({ title: 'ยืนยันการรีเซ็ต', message: 'คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลงานทั้งหมด?', confirmText: 'ใช่, รีเซ็ตเลย', cancelText: 'ยกเลิก' });
-        if (isConfirmed) { localStorage.removeItem('kanbanTasks'); localStorage.removeItem('kanbanTheme'); location.reload(); }
-    });
-
-    themeBtn.addEventListener('click', () => themePanel.classList.toggle('active'));
-    themePanel.addEventListener('click', (e) => {
-        if (e.target.classList.contains('theme-color')) {
-            const themeName = e.target.dataset.theme;
-            applyTheme(themeName); saveTheme(themeName);
-            themePanel.classList.remove('active');
+        function handleEditClick() {
+            saveChanges();
+            const isCurrentlyEditing = modal.querySelector('.modal-content.is-editing');
+            openModal(currentlyOpenTaskId, !isCurrentlyEditing);
         }
-    });
+        
+        async function handleDeleteClick() {
+            if (!currentlyOpenTaskId) return;
+            const task = tasks.find(t => t.id === currentlyOpenTaskId);
+            const isConfirmed = await showDialog({ title: 'ยืนยันการลบ', message: `คุณแน่ใจหรือไม่ว่าต้องการลบงาน "${task.title}"?`, confirmText: 'ลบ', cancelText: 'ไม่' });
+            if (isConfirmed) { tasks = tasks.filter(t => t.id !== currentlyOpenTaskId); closeModal(); renderBoard(); }
+        }
 
-    columns.forEach(column => {
-        column.addEventListener('dragover', e => e.preventDefault());
-        column.addEventListener('drop', e => {
+        function handleAddSubtask(e) {
             e.preventDefault();
-            const taskId = e.dataTransfer.getData('text/plain');
-            const newStatus = column.id.replace('-col', '');
-            const task = tasks.find(t => t.id === taskId);
-            if (task && task.status !== 'completed') { task.status = newStatus; renderBoard(); }
-        });
-    });
-
-    function showEasterEggModal() {
-        easterEggModal.querySelector('#formula-screen').classList.remove('hidden');
-        easterEggModal.querySelector('#quiz-screen').classList.add('hidden');
-        easterEggModal.classList.remove('modal-hidden');
-    }
-    function startQuiz() {
-        const formulaScreen = easterEggModal.querySelector('#formula-screen');
-        const quizScreen = easterEggModal.querySelector('#quiz-screen');
-        formulaScreen.classList.add('hidden');
-        quizScreen.classList.remove('hidden');
-        quizScreen.querySelector('.quiz-question').textContent = quiz.question;
-        const optionsContainer = quizScreen.querySelector('.quiz-options');
-        optionsContainer.innerHTML = '';
-        quiz.options.forEach((optionText, index) => {
-            const button = document.createElement('button');
-            button.textContent = optionText;
-            button.addEventListener('click', () => handleQuizAnswer(index));
-            optionsContainer.appendChild(button);
-        });
-    }
-    async function handleQuizAnswer(selectedIndex) {
-        if (selectedIndex === quiz.correctAnswerIndex) {
-            await showDialog({ title: 'ถูกต้อง!', message: 'ยินดีด้วย! คุณผ่านการทดสอบแล้ว', confirmText: 'เยี่ยมไปเลย' });
-            easterEggModal.classList.add('modal-hidden');
-        } else {
-            await showDialog({ title: 'ยังไม่ถูกต้อง', message: 'ลองทบทวนกฎแห่งการกระทำและปฏิกิริยาอีกครั้ง!', confirmText: 'ลองอีกครั้ง' });
-            showEasterEggModal(); 
+            const input = e.target.querySelector('.task-input');
+            const text = input.value.trim();
+            if (text && currentlyOpenTaskId) {
+                const task = tasks.find(t => t.id === currentlyOpenTaskId);
+                task.subtasks.push({ text: text, done: false });
+                input.value = '';
+                openModal(currentlyOpenTaskId, true); 
+                updateProgress(taskId, null); 
+            }
         }
-    }
+        
+        function closeModal() { if (modal.querySelector('.modal-content.is-editing')) { saveChanges(); } modal.classList.add('modal-hidden'); currentlyOpenTaskId = null; }
+
+        function detectAndShowDeviceType() {
+            const userAgent = navigator.userAgent;
+            let deviceType = "คอมพิวเตอร์";
+            if (/iPad|Tablet/i.test(userAgent)) deviceType = "แท็บเล็ต";
+            else if (/Mobi|Android|iPhone/i.test(userAgent)) deviceType = "มือถือ";
+            deviceInfoDiv.textContent = `มุมมองสำหรับ: ${deviceType}`;
+        }
+
+        async function updateProgress(taskId, checkboxElement) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const subtaskList = modal.querySelectorAll('.subtask-item input');
+            subtaskList.forEach((cb, index) => { if (task.subtasks[index]) task.subtasks[index].done = cb.checked; });
+            const total = task.subtasks.length;
+            const completed = task.subtasks.filter(st => st.done).length;
+            if (total > 0 && completed === total && task.status !== 'completed') {
+                const isConfirmed = await showDialog({ title: 'ยืนยันการสำเร็จงาน', message: 'ทุกขั้นตอนเสร็จสิ้นแล้ว ยืนยันเพื่อย้ายงานนี้ไปที่ "สำเร็จแล้ว"?', confirmText: 'ยืนยัน' });
+                if (isConfirmed) { task.status = 'completed'; closeModal(); } 
+                else { if (checkboxElement) checkboxElement.checked = false; task.subtasks.forEach((st, i) => { if(subtaskList[i]) st.done = subtaskList[i].checked; }); }
+            }
+            renderBoard();
+        }
+
+        function showEasterEggModal() {
+            const formulaScreen = easterEggModal.querySelector('#formula-screen');
+            const quizScreen = easterEggModal.querySelector('#quiz-screen');
+            formulaScreen.classList.remove('hidden');
+            quizScreen.classList.add('hidden');
+            easterEggModal.classList.remove('modal-hidden');
+        }
+        function closeEasterEggModal() { easterEggModal.classList.add('modal-hidden'); }
+        function startQuiz() {
+            const formulaScreen = easterEggModal.querySelector('#formula-screen');
+            const quizScreen = easterEggModal.querySelector('#quiz-screen');
+            formulaScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            quizScreen.querySelector('.quiz-question').textContent = quiz.question;
+            const optionsContainer = quizScreen.querySelector('.quiz-options');
+            optionsContainer.innerHTML = '';
+            quiz.options.forEach((optionText, index) => {
+                const button = document.createElement('button');
+                button.textContent = optionText;
+                button.addEventListener('click', () => handleQuizAnswer(index));
+                optionsContainer.appendChild(button);
+            });
+        }
+        async function handleQuizAnswer(selectedIndex) {
+            if (selectedIndex === quiz.correctAnswerIndex) {
+                await showDialog({ title: 'ถูกต้อง!', message: 'ยินดีด้วย! คุณผ่านการทดสอบแล้ว', confirmText: 'เยี่ยมไปเลย' });
+                closeEasterEggModal();
+            } else {
+                await showDialog({ title: 'ยังไม่ถูกต้อง', message: 'ลองทบทวนกฎแห่งการกระทำและปฏิกิริยาอีกครั้ง!', confirmText: 'ลองอีกครั้ง' });
+                showEasterEggModal(); 
+            }
+        }
+
+        // --- GLOBAL EVENT LISTENERS ---
+        createTaskBtn.addEventListener('click', async () => {
+            const title = await showDialog({ title: 'สร้างบล็อกใหม่', message: 'กรุณาใส่ชื่อหัวข้อของงาน:', showInput: true, confirmText: 'สร้าง' });
+            if (title && title.trim().toLowerCase() === 'eakkachai') { showEasterEggModal(); } 
+            else if (title && title.trim()) {
+                tasks.push({ id: `task-${Date.now()}`, title: title.trim(), status: 'not-started', subtasks: [], priority: 0, description: '' });
+                renderBoard();
+            }
+        });
+
+        resetDataBtn.addEventListener('click', async () => {
+            const isConfirmed = await showDialog({ title: 'ยืนยันการรีเซ็ต', message: 'คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลงานทั้งหมด?', confirmText: 'ใช่, รีเซ็ตเลย', cancelText: 'ยกเลิก' });
+            if (isConfirmed) { localStorage.removeItem('kanbanTasks'); localStorage.removeItem('kanbanTheme'); location.reload(); }
+        });
+
+        themeBtn.addEventListener('click', () => themePanel.classList.toggle('active'));
+        themePanel.addEventListener('click', (e) => {
+            if (e.target.classList.contains('theme-color')) {
+                const themeName = e.target.dataset.theme;
+                applyTheme(themeName); saveTheme(themeName);
+                themePanel.classList.remove('active');
+            }
+        });
+
+        columns.forEach(column => {
+            column.addEventListener('dragover', e => e.preventDefault());
+            column.addEventListener('drop', e => {
+                e.preventDefault();
+                const taskId = e.dataTransfer.getData('text/plain');
+                const newStatus = column.id.replace('-col', '');
+                const task = tasks.find(t => t.id === taskId);
+                if (task && task.status !== 'completed') { task.status = newStatus; renderBoard(); }
+            });
+        });
+
+        easterEggCloseBtn.addEventListener('click', startQuiz);
+        
+        // --- INITIAL APP LOAD ---
+        loadTasks();
+        loadTheme();
+        renderBoard();
+        detectAndShowDeviceType();
     
-    easterEggCloseBtn.addEventListener('click', startQuiz);
-    
-    loadTasks();
-    loadTheme();
-    renderBoard();
-    detectAndShowDeviceType();
+    });
     </script>
 </body>
 </html>
